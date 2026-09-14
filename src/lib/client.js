@@ -381,7 +381,8 @@ window.__ModuleLoader__.load({
 		}
 		/**
 		* Upload one file, resolving duplicate conflicts interactively: when the
-		* sidecar answers 409 the user picks 跳过 / 覆盖 / 重命名 / 版本归档 / 自动,
+		* sidecar answers 409 the user confirms 覆盖 (old file -> recycle bin, 7 days)
+		* or 跳过.
 		* and the upload is re-submitted with on_duplicate set. `batch` carries a
 		* shared {policy} so one confirmed choice can apply to every duplicate in
 		* the same batch upload. Returns
@@ -400,19 +401,13 @@ window.__ModuleLoader__.load({
 				: "同名文件";
 			let policy = batch && batch.policy ? batch.policy : null;
 			if (!policy) {
-				const choice = window.prompt(
+				const ok = window.confirm(
 					`检测到重复文件（${dupLabel}）：\n「${info.display_path || file.name}」\n\n` +
-					`输入 1 = 跳过（不上传该文件，不中断批量上传）\n` +
-					`输入 2 = 覆盖（旧文件移入回收站，保留 7 天）\n` +
-					`输入 3 = 重命名并上传（自动添加 _copy_N 后缀）\n` +
-					`输入 4 = 版本归档（旧文件归入 versions/，新文件作为最新版）\n` +
-					`输入 5 = 自动（按规则保留最新修改时间的版本）\n\n` +
-					`取消或留空 = 跳过该文件`, "1");
-				if (choice === null) return { outcome: "skipped" };
-				const map = { "1": "skip", "2": "overwrite", "3": "rename", "4": "version", "5": "auto" };
-				policy = map[String(choice).trim()];
-				if (!policy) return { outcome: "skipped" };
-				if (batch && window.confirm(`将此选择（${policy}）应用到本次批量上传中的所有重复文件？`)) batch.policy = policy;
+					`是否覆盖？覆盖后旧文件将移入回收站（保留 7 天）。\n\n` +
+					`「确定」= 覆盖　「取消」= 跳过该文件`);
+				if (!ok) return { outcome: "skipped" };
+				policy = "overwrite";
+				if (batch && window.confirm("本次批量上传中的其他重复文件也一律覆盖？")) batch.policy = policy;
 			}
 			if (policy === "skip") return { outcome: "skipped" };
 			const retry = await ragUploadSubmit(file, parentPath, policy);
@@ -6220,7 +6215,7 @@ window.__ModuleLoader__.load({
 			"kb.sharedDownload": "下载",
 			"kb.sharedRename": "重命名",
 			"kb.sharedTrash": "回收箱",
-			"kb.sharedTrashSub": "仅管理员可还原或彻底删除",
+			"kb.sharedTrashSub": "可还原 / 彻底删除自己删除的项；管理员可管理全部",
 			"kb.sharedTrashEmpty": "回收箱为空",
 			"kb.sharedRestore": "还原",
 			"kb.sharedPurge": "彻底删除",
@@ -6430,7 +6425,7 @@ window.__ModuleLoader__.load({
 			"kb.sharedDownload": "Download",
 			"kb.sharedRename": "Rename",
 			"kb.sharedTrash": "Trash",
-			"kb.sharedTrashSub": "Only admins can restore or purge",
+			"kb.sharedTrashSub": "Restore or purge your own items; admin can manage all",
 			"kb.sharedTrashEmpty": "Trash is empty",
 			"kb.sharedRestore": "Restore",
 			"kb.sharedPurge": "Delete forever",
@@ -6806,3 +6801,5 @@ window.__ModuleLoader__.load({
 		return module.exports;
 	}
 });
+
+//# sourceMappingURL=client.js.map
