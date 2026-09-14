@@ -5816,12 +5816,11 @@ async def shared_trash(user: str | None = None):
     if not _shared_is_local():
         return await _shared_forward("GET", "/shared/trash", params={"user": user or ""})
     acct = _shared_account(user)
-    admin = _shared_is_admin(acct)
+    if not _shared_is_admin(acct):
+        raise HTTPException(status_code=403, detail="仅管理员可以查看回收箱")
     data = _shared_manifest()
     entries = sorted(data.get("trash") or [], key=lambda x: str(x.get("deleted_at") or ""), reverse=True)
-    if not admin:
-        entries = [e for e in entries if (e.get("deleted_by") or "") == acct]
-    return {"trash": entries, "account": acct, "is_admin": admin}
+    return {"trash": entries, "account": acct}
 
 
 @app.post("/shared/trash/restore")
@@ -5831,15 +5830,14 @@ async def shared_trash_restore(request: Request):
     if not _shared_is_local():
         return await _shared_forward("POST", "/shared/trash/restore", json_body=body)
     acct = _shared_account(body.get("user"))
-    admin = _shared_is_admin(acct)
+    if not _shared_is_admin(acct):
+        raise HTTPException(status_code=403, detail="仅管理员可以还原")
     tid = str(body.get("id") or "").strip()
     data = _shared_manifest()
     trash = data.get("trash") or []
     entry = next((x for x in trash if str(x.get("id")) == tid), None)
     if entry is None:
         raise HTTPException(status_code=404, detail="回收箱记录不存在")
-    if not admin and (entry.get("deleted_by") or "") != acct:
-        raise HTTPException(status_code=403, detail="仅管理员或删除者本人可还原")
     if entry.get("kind") == "folder":
         name = str(entry.get("name") or "")
         if any(str(x.get("name") or "") == name for x in data["folders"]):
@@ -5863,14 +5861,13 @@ async def shared_trash_purge(tid: str, user: str | None = None):
     if not _shared_is_local():
         return await _shared_forward("DELETE", f"/shared/trash/{quote(tid, safe='')}", params={"user": user or ""})
     acct = _shared_account(user)
-    admin = _shared_is_admin(acct)
+    if not _shared_is_admin(acct):
+        raise HTTPException(status_code=403, detail="仅管理员可以彻底删除")
     data = _shared_manifest()
     trash = data.get("trash") or []
     entry = next((x for x in trash if str(x.get("id")) == tid), None)
     if entry is None:
         raise HTTPException(status_code=404, detail="回收箱记录不存在")
-    if not admin and (entry.get("deleted_by") or "") != acct:
-        raise HTTPException(status_code=403, detail="仅管理员或删除者本人可彻底删除")
     removed = 0
     for did in entry.get("doc_ids") or []:
         if str(did).startswith("task-"):
