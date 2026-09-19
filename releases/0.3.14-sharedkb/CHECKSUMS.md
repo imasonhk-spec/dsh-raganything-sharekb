@@ -50,7 +50,7 @@ README、`sidecar/viewer/` 187 项资源）**逐字节不变**。
 - `server.py` 是「单文件同时服务宿主与用户实例」的合成版：
   宿主 `_shared_is_local()` 为 True（PORT==SHARED_BASE 端口）-> 本地检索；
   用户实例为 False（3200N != 17321）-> 转发宿主 sidecar。判据见 `dl/rel0314/VERIFY-0.3.14.md`。
-- 8.6 的 12 份 profile 依赖**尚未**切换到本包（仍指向 0.3.12-sharedkb）；未切换前
-  重装仍会回退。切换需用 `dsh-kb-repack-lockalign` 的手术式对齐（改依赖 + 重算
-  pnpm-lock integrity + `.bak` 备份，不跑 `pnpm install`）。
-- 100.100.6.55 的 web profile 仍指向其自制 `0.3.13.tgz`，同样需要切换。
+- **8.6 多用户网关 12 份 profile 已全部对齐到本包（2026-09-19 完成）**：
+  `pnpm install --frozen-lockfile` 12/12 PASS，实装 `client.js=b41f84aa…`、`server.py=9fec09ba…`
+  ×12 统一；全树 0 处旧版引用。宿主 sidecar 与 dsh-web 已重启加载新代码。
+- 100.100.6.55 与本机 DSH Desktop 按用户选择**暂未**切换（Desktop 仍指 0.3.5）。
