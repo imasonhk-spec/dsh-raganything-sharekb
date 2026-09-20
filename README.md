@@ -59,6 +59,8 @@ DeepSeek Harness (DSH) 的「AI 知识库」插件 —— 一个包 = **宿主�
 
 | 版本 | 内容 |
 | --- | --- |
+| **0.3.15-sharedkb** | 多用户网关线（8.6）发布件。回灌 2026-09-19/20 全部线上热修（`server.py` +839/-26 行）：重试解析状态转正（`_silent_dup` 自愈 / `_find_doc_ids_by_display` 双侧 vroot 归一 / 孪生一起入队）、共享库覆盖保目录树与落点、回收箱滚动/全部还原/全部删除、对话产物跨会话账本、产物语义化命名（`semantic_title`）、`/index/reingest` 入队化；`client.js` 同步回收箱滚动与语义化命名触发。`server.py`/`client.js` 直接取 8.6 宿主活副本（12 份 md5 已一致，无需再合成）。见 [`releases/0.3.15-sharedkb/CHECKSUMS.md`](releases/0.3.15-sharedkb/CHECKSUMS.md) |
+| **0.3.14-sharedkb** | 多用户网关线（8.6）发布件。回灌 2026-09-17/18 全部热修：`server.py` 合成为 host-aware 单一权威版（含 `_shared_is_local()` 宿主守卫的 shared-scope forward 块 + Phase-4 dup 自愈 / session 产物账本 / 重试回收），`lib/client.js` 更新为全量热修版并移除失配的 `client.js.map`。见 [`releases/0.3.14-sharedkb/CHECKSUMS.md`](releases/0.3.14-sharedkb/CHECKSUMS.md) |
 | **0.3.13-sharedkb** | 多用户网关线（8.6）发布件。修复「@ 共享文件 / 文件夹 限定范围问答返回没有检索到」：① `_in_scope` 对 chunk 与 scope 两端对称剥虚拟根（全部文档/ 与 共享/）；② `_route_scope_query` host-aware——宿主本地检索、用户实例把命中共享文件夹的作用域转发宿主 sidecar（17321）并合并回答，单文件不转发自环。见 [`docs/RELEASE-0.3.13-sharedkb.md`](docs/RELEASE-0.3.13-sharedkb.md) |
 | **0.3.12-sharedkb** | 多用户网关线（8.6）发布件。「对话产物 → 打开原始文件」修复：`/documents/{art-<id>}/content` 由恒 404 改为 200（office 型返回空正文 + `file_path`，交前端 OFV 渲染）；顺带清掉 0.3.11 包内误带的 `.bak`。见 [`docs/RELEASE-0.3.12-sharedkb.md`](docs/RELEASE-0.3.12-sharedkb.md) |
 | **0.3.10-sharedkb** | sharedkb 线首个发行件（8.6:3082 live 快照）。共享知识库 + 多用户隔离 + `art-` 产物「只落盘不入库」；`server.py` 共享回收箱仅管理员可操作，`client.js` 重复上传扩展为 5 选项。见 [`docs/RELEASE-0.3.10-sharedkb.md`](docs/RELEASE-0.3.10-sharedkb.md) |
@@ -69,7 +71,8 @@ DeepSeek Harness (DSH) 的「AI 知识库」插件 —— 一个包 = **宿主�
 | 0.3.6 | 多用户数据隔离；「删除后重传仍报重复」修复（A–G 七处）；`install.sh --no-pnpm` 解析器修复 |
 | 0.3.5 | 基线 |
 
-发布说明见 [`docs/RELEASE-0.3.13-sharedkb.md`](docs/RELEASE-0.3.13-sharedkb.md)（sharedkb 线最新）、
+发布说明见 [`releases/0.3.15-sharedkb/CHECKSUMS.md`](releases/0.3.15-sharedkb/CHECKSUMS.md)（sharedkb 线最新）、
+[`docs/RELEASE-0.3.13-sharedkb.md`](docs/RELEASE-0.3.13-sharedkb.md)、
 [`docs/RELEASE-0.3.12-sharedkb.md`](docs/RELEASE-0.3.12-sharedkb.md)、
 [`docs/RELEASE-0.3.10-sharedkb.md`](docs/RELEASE-0.3.10-sharedkb.md)（sharedkb 线首个发行件）；
 原始插件线：[`docs/RELEASE-0.3.10.md`](docs/RELEASE-0.3.10.md)（历史：[0.3.9](docs/RELEASE-0.3.9.md) · [0.3.8](docs/RELEASE-0.3.8.md) · [0.3.7](docs/RELEASE-0.3.7.md)）、
@@ -80,8 +83,8 @@ DeepSeek Harness (DSH) 的「AI 知识库」插件 —— 一个包 = **宿主�
 可移植包由 `packaging/`（安装器 + 载荷 + 校验清单）与 `src/`（插件源码）组装，`plugin/` 内为 `dsh plugin add` 用的插件包（由 [`build/pack_kb.py`](build/pack_kb.py) 确定性打包）：
 
 ```bash
-tar xzf dsh-raganything-kb-0.3.13-sharedkb-portable.tar.gz
-cd dsh-raganything-kb-0.3.13-sharedkb-portable
+tar xzf dsh-raganything-kb-0.3.15-sharedkb-portable.tar.gz
+cd dsh-raganything-kb-0.3.15-sharedkb-portable
 SUDO_PW='<sudo 密码>' ./install.sh --profile web   # 以 DSH 属主用户运行，不要用 root
 ./verify.sh --profile web --deep                   # --deep 会真的提交一次查询验证整条链路
 ```
@@ -94,7 +97,7 @@ SUDO_PW='<sudo 密码>' ./install.sh --profile web   # 以 DSH 属主用户运�
 > `pkill -f "python.*server.py"`，在 8.6 这类多用户宿主上会连带杀掉宿主 sidecar 和其他用户的
 > 懒加载实例 —— 详见 [发布说明](docs/RELEASE-0.3.12-sharedkb.md)。
 
-发布件同时归档在 `releases/` 下：`0.3.13-sharedkb/`、`0.3.12-sharedkb/`、`0.3.10-sharedkb/`
+发布件同时归档在 `releases/` 下：`0.3.15-sharedkb/`、`0.3.14-sharedkb/`、`0.3.13-sharedkb/`、`0.3.12-sharedkb/`、`0.3.10-sharedkb/`
 （各含 `.tgz` / `-portable.tar.gz` / `CHECKSUMS.md`）。
 
 ---
