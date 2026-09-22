@@ -88,6 +88,7 @@ python build/build_portable_0313.py \
 | `inventory_profiles_0312.py` | **只读**盘点宿主 + 11 个用户 profile 的插件安装：依赖指向哪个 tgz、`node_modules/dsh-raganything-kb` 是真目录还是软链、已装副本与新载荷的逐文件差异。顺带把新包解到 `/tmp/rel0312` 供比对。先跑它再决定要不要动 |
 | `deploy_profiles_0312.py` | 把 12 份依赖从旧 tgz 切到新 tgz。**逐份改三处**：profile `package.json` 的依赖、已安装包的 `package.json`、补 `RELEASE-NOTES.md`；每份先留 `.bak-*`。默认 dry-run，`--apply` 才落盘，可重复执行（二次运行报 12/12 already） |
 | `deploy_profiles_0313.py` | 同上，切到 0.3.13（0.3.12 → 0.3.13）。前置：把 `0.3.13-sharedkb.tgz` 解到 `/tmp/rel0313`。切换后**必须重启**：宿主 `systemctl restart raganything-sidecar`、用户实例 `POST :3200N/models/restart` |
+| **`sync_0316_86.py`** | **当前最新**（0.3.15 → 0.3.16，在 8.6 上跑，dry-run 默认 / `--apply` 生效）。比 0313 版多两件事：①**同时改 `pnpm-lock.yaml`**（5 处 tgz 引用改名 + `resolution.integrity` 按 `"sha512-"+base64(sha512(tgz 字节))` 重算 + 条目 `version:` 行）；②**载荷按 tgz 全量比对、只重写字节不同的文件**（`viewer/**` 187 项永不触碰），因此能自愈任意一份跑偏的副本。逐份留 `.bak-rel0316-<ts>`。★ 别把 lock 里"旧的" integrity 当锚点用——0.3.15 那次只改了 tgz 名字、integrity 还停在 **0.3.14** 的值 |
 | `drill_0312_no_collateral_kill.sh` | 在**跑着生产 sidecar 的宿主**上做沙盒安装演练，并对比演练前后 `pgrep -af server.py` 的列表：必须零差异。退出码 0 = 无连带误杀。0.3.12 之前安装器的无锚点 `pkill` 在这里会现形 |
 | `respawn_user_sidecar.sh` | 某个**用户实例** sidecar 被杀且没自愈时，按插件 `spawnSidecar()` 同款环境把它拉回来。宿主 sidecar 有 `Restart=always` 自愈，**用户实例是懒加载的、插件只"接管"已在跑的进程，杀了没人管** → 网关 502 `rag sidecar on port <p> unreachable`。用法 `USER=admin PORT=32001 bash respawn_user_sidecar.sh`（slot → 端口 = 32000+slot） |
 

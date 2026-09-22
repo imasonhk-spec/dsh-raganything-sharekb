@@ -77,25 +77,44 @@
 - `plugin/dsh-raganything-kb-0.3.16.tgz` 与发行 tgz 逐字节相同
 - 组装脚本自查：manifest 清单 == 归档实际条目（比对时排除不自列的 `manifest.json`）
 
-## 部署侧状态（重要，未随本包自动完成）
+## 部署侧状态 —— ✅ 已于 2026-09-22 20:33 完成切换
 
-2026-09-22 核验 8.6 上 12 份 `dsh-raganything-kb` 副本：
+切换前核验（2026-09-22 18:5x）发现的**真实回退**：
 
 | 范围 | `sidecar/server.py` | 说明 |
 | --- | --- | --- |
 | 宿主 `web` + 10 个账号（chenning/fresh1/iso1/mason/minson/test/test01/test02/test3/xiongsirui） | `a1e8c800…`（CRLF 热修版） | 与 0.3.16 打包输入同源（仅换行归一差异） |
 | 账号 `admin` | `75559557795d26…`（375559 B = **0.3.15 发行件原样**） | 2026-09-22 18:47 被按 `file:…0.3.15-sharedkb.tgz` **重新物化**，热修被回退 |
 
-即：**「热修只活在活副本、一重装就回退」的风险已经真实发生一次**（`admin`）。
-12 份 profile 的依赖串当前仍全部指向 `file:/home/lgsj/dsh-raganything-kb-0.3.15-sharedkb.tgz`；
-不切到 0.3.16 指符，任何一次 `pnpm install` / 重新物化都会继续回退。
+即「热修只活在活副本、一重装就回退」的风险已实际发生一次（`admin`）。
 
-切换做法（文件层三重一致手工对齐，**不要跑 `pnpm install`**）：
-① profile `package.json` 依赖串 -> 新 tgz 绝对路径；② `pnpm-lock.yaml` 内同一 tgz 的全部引用
-（实测 5 处）+ `resolution.integrity` + 包条目 `version:` 行；③ 已装
-`node_modules/dsh-raganything-kb/package.json` 的 `version`。
-宿主重启 `systemctl restart raganything-sidecar`（独立服务，`restart dsh-web` 不会带上它）；
-用户实例用 `POST :3200N/models/restart` 或整服务重启 `dsh-web`。
+### 切换动作（`build/sync_0316_86.py`，在 8.6 上 dry-run 后 `--apply`）
 
-> 另注：活副本里的 `RELEASE-NOTES.md` 仍是 **0.3.14** 的文案（0.3.15/0.3.16 的说明只存在于发行包），
-> 属部署侧文档漂移，不影响运行；切版时建议一并补上。
+对新 tgz 稳定落地 `/home/lgsj/dsh-raganything-kb-0.3.16-sharedkb.tgz`
+（SFTP 上传 + 远端 `sha256sum` 与本地一致），解到 `/tmp/rel0316/`，随后逐份（12 份）：
+
+1. profile `package.json` 依赖串 `0.3.15 -> 0.3.16`（备份 `.bak-rel0316-<ts>`）；
+2. `pnpm-lock.yaml`：5 处 tgz 引用改名 + `resolution.integrity` + 条目 `version:` 行；
+3. 已装插件目录：**只重写字节不同的文件**（实测 12 份都只动 `sidecar/server.py`；
+   宿主/admin/mason 另外补了 `RELEASE-NOTES.md`），`sidecar/viewer/**` 187 项一律不碰。
+
+★ **顺带修掉一个历史遗留**：切换前所有 12 份 lock 里记的 integrity 是
+`sha512-pChCwVQs+…`，实测那是 **0.3.14** tgz 的 sha512 —— 0.3.15 那次切换只改了 tgz 名字、
+**没更新 integrity**。本版按 `"sha512-" + base64(sha512(tgz 字节))` 重算并写入
+`sha512-pcffIoGKtpYveLkbA1r8Qq6jf8Zqa98vtP85NWRZHpyuYPIstXFLl4asXDz/Vhb087g3U3XWXa9E1LKYr/+DAA==`。
+
+### 切换后核验（全绿）
+
+| 检查 | 结果 |
+| --- | --- |
+| 12 份 `package.json` 依赖串 | 全部 `file:/home/lgsj/dsh-raganything-kb-0.3.16-sharedkb.tgz` |
+| 12 份 `pnpm-lock.yaml` | 新名引用 5 处 / 旧名 0 处 / 新 integrity 1 处 |
+| 12 份 `sidecar/server.py` | **12/12 md5 = `cc60b66917834cc7d0c6de1ddfe29b9a`（= 发行件内那份）** |
+| 12 份已装 `package.json` version | 全部 `0.3.16` |
+| 12 份载荷全树比对（195 文件 vs `/tmp/rel0316/package`） | **0 diff / 0 missing** |
+| 服务重启 | `sudo systemctl restart raganything-sidecar` + `restart dsh-web`，两者 `is-active=active` |
+| 宿主 sidecar `:17321` | `GET /documents`=200、`POST /ingest_file`=400（端点存在）、`/status` ok / init / `tasks_running=0` |
+| 账号实例（`admin` `:32001`，由 admin profile 现拉起的） | `GET /documents`=200、`POST /ingest_file`=400 ⇒ **原先回退的那份现在确实在跑 0.3.16** |
+| 网关 | `https://127.0.0.1:3082/mu/login` = 200；`sidecar.log` 无报错 |
+
+回滚：`cp -a <f>.bak-rel0316-20260922-203210 <f>`（每个被改文件旁都留了备份）+ 依赖改回 0.3.15 指符 + 重启同两个服务。
