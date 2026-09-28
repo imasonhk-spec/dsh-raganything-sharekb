@@ -1,109 +1,111 @@
-# dsh-raganything-sharekb
+# dsh-raganything-kb
 
-DeepSeek Harness (DSH) 的「AI 知识库」插件 —— 一个包 = **宿主插件 + DSH 内嵌前端面板 + Python sidecar**。
+为 DeepSeek Harness 接入 [RAG-Anything](https://github.com/HKUDS/RAG-Anything)（HKUDS，基于 LightRAG 的多模态 RAG 框架）。
 
-装好之后，DSH 侧边栏会多出一个「知识库」入口：上传资料 → 自动解析入库 → 检索问答，
-还能把问答产物导出成 Office 文档。
+> 装到任意一台 DSH 后，**得到一个全新的、空的知识库**：不携带任何已上传文档/向量数据，由该服务器自己通过 `rag_ingest` / `rag_ingest_text` 积累内容。每台服务器完全独立，互不关联。
 
-> **本仓库是 sharedkb 线**（共享知识库线）：面向**多用户网关**部署（192.168.8.6:3082），
-> 在多用户隔离之上叠加共享知识库（`/shared/*`、共享回收箱）与「产物只落盘不入库」。
-> 原始插件线（单机 / 纯插件，版本止于 0.3.10）在 [`dsh-raganything-kb`](https://github.com/imasonhk-spec/dsh-raganything-kb)。
->
-> 本仓库由该仓库的 4 条 sharedkb 分支（`feature/shared-kb` + 3 条 `release/*-sharedkb`）
-> **合并收敛为单一主线**而来 —— 合并依据、旁支核对结论与谱系图见
-> [`docs/LINEAGE-sharedkb.md`](docs/LINEAGE-sharedkb.md)。
->
-> **分支纪律：单一主线，不再按版本开 `release/*` 分支。**
+安装后 **Web 界面与当前 DSH 完全一致**：侧边栏「知识库」入口（渲染在「设置」正上方）+ 全屏知识库面板（连接状态、文档树、搜索、AI 问答、历史对话、上传、模型管理、索引管理、日志）。UI 由插件自带客户端 bundle 提供，不依赖其他服务器的任何界面改动。
 
----
+插件含宿主端 + 浏览器端两部分，两种部署模式：
 
-## 组成
+- **本地托管模式**（默认）：托管 Python sidecar（FastAPI 封装 RAGAnything/LightRAG），首次启动自动生成 sidecar 配置（若尚无 config.json），注册 `rag_*` 模型工具。
+- **远程共享模式**：只作为客户端直连别的服务器知识库（`sidecarHost` 非本机时自动进入；不生成本地配置）。
 
-| 位置 | 文件 | 职责 |
-| --- | --- | --- |
-| 宿主插件 | `src/lib/index.js` | 向 DSH 注册 6 个 `rag_*` 工具；托管 sidecar 进程（健康检查优先 adopt，缺服务才 spawn） |
-| 前端面板 | `src/lib/client.js` | 侧边栏入口 + 全屏知识库 UI：目录树 / 检索 / 问答 / 历史 / 上传 / AI 模型 / 索引管理 / 日志 / 导出 / **对话产物栏**。面板内所有文档计数统一走 `kbDocs` 口径（排除只读 `DSH产物/` 镜像与 `知识库产物/` 产物），状态栏与「索引」弹窗数字一致 |
-| sidecar | `src/sidecar/server.py` | LightRAG 检索与入库、MinerU 解析（PDF / Office / 图片）、本地 bge-m3 GGUF 向量、四路去重、工作区同步、失败台账 |
-| 配置模板 | `src/kb/config.json.template` | 零配置安装时的 sidecar 配置基线 |
-| 插件声明 | `src/cordis.patch.yml` | DSH 插件元数据 |
-| 安装骨架 | `packaging/` | 幂等安装器 / 验证器 / 卸载器 + systemd · nginx · env 模板 + 配置适配脚本 |
-| 打包工具 | `build/` | 从 live 插件目录快照出「可移植包」；把补丁函数级移植到**已分叉**的部署 |
+## 工具
 
-## 主要能力
-
-- **多模态入库**：PDF / Office / 图片经 MinerU 解析后入 LightRAG
-- **本地向量**：bge-m3 GGUF（1024 维），运行时自举 `llama-cpp-python` + 模型自动下载（走 hf-mirror）
-- **四路重复检测**：同名 / 同 SHA-256 同名 / 同 SHA-256 跨名 / 图片 pHash，策略可配
-- **失败台账**：错误分类 + 重试收割 + 额度熔断（额度不足时不再无限重试）
-- **产物导出**：问答结果导出 docx / xlsx / pptx
-- **多用户隔离**：localStorage 按账号加命名空间（`dsh_mu_user`）；sidecar 基址跟随网关 basePath；每个账户自启自己的 sidecar
-- **「对话产物」栏**：会话产物按会话分组展示在对话框右侧，可折叠，每项一个 `@文件` 按钮把产物作为引用注入当前对话
-
-## 分支与打补丁须知（重要）
-
-同一份代码已在多套部署上**分叉**，各自带着对方没有的特性：
-
-| 分支 | 特征 |
+| 工具 | 作用 |
 | --- | --- |
-| 基准 | 纯插件代码 |
-| 多用户网关分支 | 基准 + 多用户隔离（`MU_NS` 命名空间、网关 basePath） |
-| 单机分支 | 基准 + 面板崩溃防护（`normaliseModelsSnap`） |
-| 多用户网关线 `0.3.x-sharedkb`（8.6 线上） | 多用户网关分支 + 共享知识库（`/shared/*`、回收箱）+ **产物「只落盘不入库」**（doc_id 前缀 `art-`），因此 `/documents/{art-*}/content` 需要单独分支处理（0.3.12 修复）。**本仓库即此线，已收敛为单一主线**（0.3.10-sharedkb → 0.3.13-sharedkb） |
-| `src/`（`0.4.0-sharedkb.1`） | 产物走「真实入库」模型（`file_path` 带 `DSH产物/`、`知识库产物/` 前缀），与上面这条线**不可互相整文件覆盖** |
+| `rag_status` | sidecar 健康、配置摘要（无密钥）、文档/任务计数 |
+| `rag_query` | 知识库检索并生成回答（hybrid/local/global/naive/mix，长任务可 `run_in_background`） |
+| `rag_ingest` | 入库本地文件：`.txt`/`.md` 直读；PDF/Office/图片走 MinerU 解析 |
+| `rag_ingest_text` | 入库一段原始文本（标题作为引用来源） |
+| `rag_docs` | 列出已入库文档（ID、标题、状态、分块数） |
+| `rag_delete` | 按文档 ID 删除一篇文档 |
 
-**给已分叉的部署打补丁，不要整文件覆盖** —— 用函数级锚点替换，并且每处都断言命中次数
-（见 `build/kb_artifact_rail_patch.py`、`build/apply_norm_fix.py`）。整文件覆盖会把对方独有的
-功能静默冲掉。
+## 知识库问答生成 Word / Excel / PPT
 
-## 版本
+知识库面板的 AI 问答可以直接生成真正的 Office 文件产物：
 
-| 版本 | 内容 |
-| --- | --- |
-| **0.3.17-sharedkb** | 多用户网关线（8.6）发布件。回灌 2026-09-22 以来 client 侧热修（`server.py` 本版未动，与 0.3.16 逐字节相同）：① `kbIcons071`——DSH 0.1.7-alpha.2 图标导出尺寸后缀（`IconX14/16`）-> 字重后缀（`IconXRegular`）适配，缺了即 React #130 整条知识库 UI 消失；② KB 面板 x DSH 导航栏联动（`closeKbPanel` / `softCloseKb` / `activePanelId` 监视 / 捕获阶段导航点击兜底）；③ 侧栏跟随（`--dsh-kb-left`）；④ `lib/index.js` 工具 schema 修复——属性级 `required: true` 移到顶层 `required` 数组（严格 OpenAI/Gemini 端点旧 schema 一律 400）。见 [`releases/0.3.17-sharedkb/CHECKSUMS.md`](releases/0.3.17-sharedkb/CHECKSUMS.md) |
-| **0.3.16-sharedkb** | 多用户网关线（8.6）发布件。回灌 2026-09-21 server 侧热修（`server.py` 相对 0.3.15 真实改动 **+192/-24 行**）：① 产物正文抽取 `_artifact_text_of()`（docx/xlsx/pptx 用 python-docx/openpyxl/python-pptx 解析，替代旧「office 二进制返回空正文」）；② 跨实例解析 `_global_upload_dir()` + `_original_file_of()` 第三级回退（子账号实例去宿主 `uploads/` 找原始文件）；③ 新增 `ingest_file`（`POST /ingest_file` + `/tasks` op 分支 + `_copy_file_artifact()`），把外部已生成的 office 文件登记为「仅文件」产物。★ 线上 `server.py` 是 **CRLF 泄漏版**（8465 CRLF / 0 裸 LF），本版归一为 LF 后打包。`lib/client.js` 与 0.3.15 逐字节相同。见 [`releases/0.3.16-sharedkb/CHECKSUMS.md`](releases/0.3.16-sharedkb/CHECKSUMS.md) |
-| **0.3.15-sharedkb** | 多用户网关线（8.6）发布件。回灌 2026-09-19/20 全部线上热修（`server.py` +839/-26 行）：重试解析状态转正（`_silent_dup` 自愈 / `_find_doc_ids_by_display` 双侧 vroot 归一 / 孪生一起入队）、共享库覆盖保目录树与落点、回收箱滚动/全部还原/全部删除、对话产物跨会话账本、产物语义化命名（`semantic_title`）、`/index/reingest` 入队化；`client.js` 同步回收箱滚动与语义化命名触发。`server.py`/`client.js` 直接取 8.6 宿主活副本（12 份 md5 已一致，无需再合成）。见 [`releases/0.3.15-sharedkb/CHECKSUMS.md`](releases/0.3.15-sharedkb/CHECKSUMS.md) |
-| **0.3.14-sharedkb** | 多用户网关线（8.6）发布件。回灌 2026-09-17/18 全部热修：`server.py` 合成为 host-aware 单一权威版（含 `_shared_is_local()` 宿主守卫的 shared-scope forward 块 + Phase-4 dup 自愈 / session 产物账本 / 重试回收），`lib/client.js` 更新为全量热修版并移除失配的 `client.js.map`。见 [`releases/0.3.14-sharedkb/CHECKSUMS.md`](releases/0.3.14-sharedkb/CHECKSUMS.md) |
-| **0.3.13-sharedkb** | 多用户网关线（8.6）发布件。修复「@ 共享文件 / 文件夹 限定范围问答返回没有检索到」：① `_in_scope` 对 chunk 与 scope 两端对称剥虚拟根（全部文档/ 与 共享/）；② `_route_scope_query` host-aware——宿主本地检索、用户实例把命中共享文件夹的作用域转发宿主 sidecar（17321）并合并回答，单文件不转发自环。见 [`docs/RELEASE-0.3.13-sharedkb.md`](docs/RELEASE-0.3.13-sharedkb.md) |
-| **0.3.12-sharedkb** | 多用户网关线（8.6）发布件。「对话产物 → 打开原始文件」修复：`/documents/{art-<id>}/content` 由恒 404 改为 200（office 型返回空正文 + `file_path`，交前端 OFV 渲染）；顺带清掉 0.3.11 包内误带的 `.bak`。见 [`docs/RELEASE-0.3.12-sharedkb.md`](docs/RELEASE-0.3.12-sharedkb.md) |
-| **0.3.10-sharedkb** | sharedkb 线首个发行件（8.6:3082 live 快照）。共享知识库 + 多用户隔离 + `art-` 产物「只落盘不入库」；`server.py` 共享回收箱仅管理员可操作，`client.js` 重复上传扩展为 5 选项。见 [`docs/RELEASE-0.3.10-sharedkb.md`](docs/RELEASE-0.3.10-sharedkb.md) |
-| **0.3.10** | ABCD 加固 + 多用户本地模型 SSL 彻底修复：`server.py` 本地端点自适应（选本地模型不再报 `CERTIFICATE_VERIFY_FAILED`）、`/models/restart` 端口竞态修复；`client.js` 退化答案检测 + `degraded` 透传（不再把退化回答写成「知识库产物」）；10 份 `config.json` 归一化到 `127.0.0.1:11434/v1`；问答模型切 `qwen3.6:35b-chat` |
-| 0.3.9 | 「索引」弹窗计数口径修复：`extDist` 遍历 `kbDocs` 而非全部 `docs`，弹窗数字与侧栏状态栏、目录树三者一致（此前状态栏 9、弹窗 455） |
-| 0.3.8 | 状态栏计数对齐目录树（`kbDocs.length`）；「对话产物」栏只列生成文件（跳过对话 `.md`）；`server.py` 增加 OFV `/viewer/*` 静态挂载 |
-| 0.3.7 | 「对话产物」栏；产物文件夹从知识库树下线；全局检索恒定排除产物；面板崩溃防护；打包缺陷修复（`uninstall.sh` 的 CRLF、误打进包里的 `__pycache__`） |
-| 0.3.6 | 多用户数据隔离；「删除后重传仍报重复」修复（A–G 七处）；`install.sh --no-pnpm` 解析器修复 |
-| 0.3.5 | 基线 |
+- **自动识别**：提问时明确要求「以 word/excel/ppt 格式输出」「生成 PPT」「做成表格」等，
+  回答结束后 sidecar 会把回答的 markdown 转成 `.docx` / `.xlsx` / `.pptx`，
+  作为文档入库到「知识库产物/<会话>/」文件夹（可点击「打开原始文件」下载，
+  本地用 Office/WPS 打开，保留原始版式）；未指定格式时维持原有 `.md` 问答记录。
+- **手动导出**：每条已完成的 AI 回答下方有 Word / Excel / PPT 三个导出按钮，
+  随时可以把该回答导出为对应 Office 文件。
+- **实现**：sidecar `POST /tasks` 新增 `ingest_office` 操作
+  `{text, title?, format?}`（format 支持 docx/xlsx/pptx 及 word/excel/ppt 别名），
+  转换基于 venv 内置的 python-docx / openpyxl / python-pptx；
+  同一回答重复导出时 LightRAG 内容去重按成功收尾（`existing: true`），文件仍可下载。
 
-发布说明见 [`releases/0.3.17-sharedkb/CHECKSUMS.md`](releases/0.3.17-sharedkb/CHECKSUMS.md)（sharedkb 线最新）、
-[`docs/RELEASE-0.3.17-sharedkb.md`](docs/RELEASE-0.3.17-sharedkb.md)、
-[`docs/RELEASE-0.3.16-sharedkb.md`](docs/RELEASE-0.3.16-sharedkb.md)、
-[`docs/RELEASE-0.3.13-sharedkb.md`](docs/RELEASE-0.3.13-sharedkb.md)、
-[`docs/RELEASE-0.3.12-sharedkb.md`](docs/RELEASE-0.3.12-sharedkb.md)、
-[`docs/RELEASE-0.3.10-sharedkb.md`](docs/RELEASE-0.3.10-sharedkb.md)（sharedkb 线首个发行件）；
-原始插件线：[`docs/RELEASE-0.3.10.md`](docs/RELEASE-0.3.10.md)（历史：[0.3.9](docs/RELEASE-0.3.9.md) · [0.3.8](docs/RELEASE-0.3.8.md) · [0.3.7](docs/RELEASE-0.3.7.md)）、
-[`docs/RELEASE-shared-kb.md`](docs/RELEASE-shared-kb.md)。
+## 安装（其他 DSH 服务器，全新独立知识库）
 
-## 安装（可移植包）
+前提：目标服务器已安装 DSH，且 Python 3.10+ 可用。
 
-可移植包由 `packaging/`（安装器 + 载荷 + 校验清单）与 `src/`（插件源码）组装，`plugin/` 内为 `dsh plugin add` 用的插件包（由 [`build/pack_kb.py`](build/pack_kb.py) 确定性打包）：
+```sh
+# 1) 准备 Python 环境（本机默认 ~/.dsh/raganything/venv）
+python3 -m venv ~/.dsh/raganything/venv
+~/.dsh/raganything/venv/bin/pip install 'raganything[text]' fastapi 'uvicorn[standard]' 'mineru[core]' python-docx openpyxl python-pptx
 
-```bash
-tar xzf dsh-raganything-kb-0.3.17-sharedkb-portable.tar.gz
-cd dsh-raganything-kb-0.3.17-sharedkb-portable
-SUDO_PW='<sudo 密码>' ./install.sh --profile web   # 以 DSH 属主用户运行，不要用 root
-./verify.sh --profile web --deep                   # --deep 会真的提交一次查询验证整条链路
+# 2) 安装本插件（把 dsh-raganything-kb-<版本>.tgz 拷到目标机器）
+dsh plugin --profile desktop add ./dsh-raganything-kb-0.3.4.tgz
+
+# 3) 重启 DSH（宿主插件 + 浏览器端 UI 一起生效）
 ```
 
-安装器是**幂等**的：**升级直接重跑 `install.sh`，不要先卸载**（卸载会删插件目录）。
-每一步都会留 `.bak-*` 备份，旧版本也会存一份到 `~/.dsh/raganything/backup-portable-<时间戳>/`。
+首次启动时，若 `~/.dsh/raganything/config.json` 不存在，插件会自动从内置模板生成一份——**embedding 默认走本地 bge-m3 GGUF（1024 维，纯本地推理，不依赖任何在线 embedding 服务）**。首次启动 sidecar 会自动补齐所需组件（自动安装 llama-cpp-python 运行时、自动下载 bge-m3 模型，完成后自动重启生效），**无需任何手动操作**。sidecar 开箱即用——**知识库为空**，`rag_docs` 显示 0 篇，开始用 `rag_ingest` / `rag_ingest_text` 积累自己的知识库即可。
 
-> **多用户宿主注意**：`install.sh --no-systemd` 停旧 sidecar 时只会停**本实例自己**的进程
-> （pkill 锚定本实例 venv 路径 + 本实例 `$RAG_HOME/sidecar.pid`）。0.3.12 之前是无锚点的
-> `pkill -f "python.*server.py"`，在 8.6 这类多用户宿主上会连带杀掉宿主 sidecar 和其他用户的
-> 懒加载实例 —— 详见 [发布说明](docs/RELEASE-0.3.12-sharedkb.md)。
+> 不会覆盖已有配置：若服务器上已有 `config.json` 或已存在知识库数据，插件一律不动。
+> 自动就绪仅针对本地 GGUF embedding：远程/openai 后端不触发；已有可用的运行时与模型时也直接跳过。
 
-发布件同时归档在 `releases/` 下：`0.3.17-sharedkb/`、`0.3.16-sharedkb/`、`0.3.15-sharedkb/`、`0.3.14-sharedkb/`、`0.3.13-sharedkb/`、`0.3.12-sharedkb/`、`0.3.10-sharedkb/`
-（各含 `.tgz` / `-portable.tar.gz` / `CHECKSUMS.md`）。
+## 打包方法（在插件目录内）
 
----
+```sh
+cd dsh-raganything-kb
+npm pack        # 产物即分发用的 tgz；files 已限定 lib/、sidecar/server.py、cordis.patch.yml、kb/、README.md
+```
 
-内部项目，未附许可证。
+## 架构
+
+```
+DSH (Node, dsh --profile <name>)
+└── dsh-raganything-kb 插件
+    ├── 宿主端 (lib/index.js)
+    │   ├── 首次启动：若无 config.json 则从 kb/config.json.template 生成
+    │   ├── 拉起/收养 sidecar 子进程（首次工具调用时；插件 stop 时 SIGTERM）
+    │   ├── 密钥桥接：启动时从 ~/.dsh/.credentials.yaml refs 读取 API key，
+    │   │   仅通过 RAG_LLM_API_KEY 环境变量传入 —— 不落盘、不进日志
+    │   └── rag_* 工具 ⇄ HTTP 127.0.0.1:17321 ⇄ sidecar/server.py
+    │       ├── RAGAnything + LightRAG（存储 ~/.dsh/raganything/storage，全新空库）
+    │       ├── LLM / 视觉：OpenAI 兼容端点（tokenstore）
+    │       └── 嵌入：本地 GGUF bge-m3（1024 维，llama-cpp-python 推理；首次启动自动就绪）
+    └── 浏览器端 (lib/client.js，经 dsh.client 声明自动挂载)
+        ├── 注册 sidebar.footer.action 槽位（id: knowledge-base, order: 0，
+        │   渲染在「设置」上方）→ 打开全屏知识库面板
+        ├── 自带 locale 词典（raganything 命名空间，与官方 settings 无冲突）
+        └── 面板直连 http://<host>:17321 sidecar（CORS 已放行）
+```
+
+- sidecar 独立于 DSH 生命周期：DSH 重启后健康检查直接收养已有实例，避免重复进程。
+- 知识库数据完全由各服务器本地积累：`~/.dsh/raganything/storage/`（向量库 + 图谱 + 源文件），互不共享。
+- 远程模式：不 spawn 任何进程，所有请求带 `Authorization: Bearer <token>`（配置了 apiToken 时）；`autoStart` 默认关闭。
+
+## 配置（cordis.patch.yml insert 行 config）
+
+`sidecarPort`（17321）、`sidecarHost`（`127.0.0.1`=本地托管；其他地址=远程共享）、`sidecarDir`、`sidecarConfig`、`pythonBin`、`ragHome`、`autoStart`（远程模式默认 `false`）、`startTimeoutMs`、`requestTimeoutMs`、`apiKeyEnv`（环境变量优先的密钥来源）、`credentialsFile`、`credentialsRef`（默认 `TOKENSTORE_API_KEY`）、`apiToken`（远程访问令牌）、`tokenEnv`（默认 `RAGANYTHING_API_TOKEN`，环境变量优先）。
+
+## 知识库存储位置
+
+- 数据：`~/.dsh/raganything/storage/`（LightRAG 持久化存储：`kv_store_*.json`、`vdb_*.json` 1024 维向量库、`graph_chunk_entity_relation.graphml` 图谱、`uploads/` 入库源文件）。
+- 配置：`~/.dsh/raganything/config.json`。
+- 首次运行配置模板：包内 `kb/config.json.template`（`__RAG_HOME__` 会被替换为实际 ragHome）。
+
+## 已知取舍
+
+- 目标机器首次用 MinerU 解析 PDF 会下载模型并推理，耗时取决于硬件；建议 `run_in_background: true`。
+- embedding 默认本地 bge-m3 GGUF（1024 维，纯本地，不依赖在线服务）；首次启动自动安装
+  llama-cpp-python 运行时 + 自动下载模型（源：hf-mirror；若目标机无法访问需手动配置镜像）。
+- 若目标服务器无法访问 tokenstore（LLM/视觉端点），需在 `~/.dsh/raganything/config.json` 中改为可达的 OpenAI 兼容端点（embedding 已本地化，不受影响）。
+- 切换 embedding 模型/维度后需保持全库一致（已入库向量维度不匹配需重新入库，参考 `rebuild_index.sh` 思路：备份 → 清空 `vdb_*.json`/`kv_store_*.json` → 重启 → 重入）。
+- 浏览器端面板直连 sidecar 的 `17321` 端口（`http://<页面主机名>:17321`）。目标服务器需保证该端口可从浏览器所在机器访问（默认配置 `sidecarHost: 0.0.0.0`，防火墙放行即可）。
+- UI 兼容官方 DSH 客户端：依赖 `@deepseek-ai/dsh-client-ui-primitives`、`ui-slots`、`locale`、`api-remotes`（官方 web bundle 自带，无需额外安装）。
+- 若目标服务器 DSH 版本过旧（无 `sidebar.footer.action` 槽位声明），侧边栏入口不会出现，但 `rag_*` 工具不受影响。
