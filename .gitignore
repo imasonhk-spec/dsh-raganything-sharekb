@@ -1,3 +1,4 @@
+# 构建产物 / 历史归档：不入库（git clone 体积会影响 pnpm 装 git 依赖的速度）
 # build artefacts — never committed
 __pycache__/
 *.pyc
@@ -11,3 +12,5 @@ dist/
 tmp_*
 .tmp_*
 .repo_push/
+
+releases/
