@@ -1,7 +1,7 @@
 {
   "name": "dsh-raganything-kb",
-  "version": "0.3.17",
-  "description": "RAG-Anything (HKUDS) multimodal RAG knowledge base for DeepSeek Harness: install on any DSH host to get a fresh, empty, fully independent knowledge base with rag_* model tools and the in-DSH 知识库 UI (sidebar entry directly above Settings). No knowledge base data is bundled — each host builds its own.",
+  "version": "0.4.0",
+  "description": "RAG-Anything knowledge base for DSH: prototype workbench main view, request-scoped generation and verified sources; no knowledge base data bundled.",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -11,9 +11,9 @@
   },
   "files": [
     "lib/",
-    "sidecar/server.py",
+    "sidecar/*.py",
+    "sidecar/viewer/",
     "cordis.patch.yml",
-    "kb/",
     "README.md"
   ],
   "license": "MIT",
@@ -23,9 +23,11 @@
     },
     "client": {
       "platform": "web",
+      "immediately": true,
       "inject": [
         "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-api-remotes"
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-client-ui-layout"
       ]
     }
   }
