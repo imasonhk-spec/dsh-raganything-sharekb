@@ -1,33 +1,47 @@
-# dsh-raganything-kb 0.3.17-sharedkb
+# dsh-raganything-kb 0.4.1-sharedkb
 
-分支：8.6 多用户网关线（sharedkb），基线 = 0.3.16-sharedkb。
+分支：8.6 多用户网关线（sharedkb），基线 = `0.4.0-sharedkb`。
 
-## 与基线差异（仅四处，其余成员逐字节不变）
+运行时文件逐字节取自 2026-10-13 的 8.6 宿主活副本
+（`/home/lgsj/.dsh/profiles/web/node_modules/dsh-raganything-kb`）。
+
+## 与基线的差异（仅三处，其余成员逐字节不变）
 
 | 成员 | 变更 |
 | --- | --- |
-| `lib/client.js` | 回灌 2026-09-22 以来全部 client 侧线上热修（410089 B -> 415617 B）：① **0.1.7 图标兼容**（`kbIcons071`：`IconX14/16` 尺寸后缀 -> `IconXRegular` 字重后缀，随 DSH 0.1.7-alpha.2 升级落地的适配，缺了即 React #130 整条 UI 消失）；② **KB 面板与 DSH 导航栏联动**：`closeKbPanel`（Esc/关闭 = 回主页并展开侧栏）、`softCloseKb`（点其他面板即轻量收起覆盖层）、主面板切换监视（`usePanelInfo`/`activePanelId`）、导航栏捕获阶段点击兜底；③ **侧栏跟随**：打开期间跟踪 DSH 侧栏列宽发布为 `--dsh-kb-left`，fixed 覆盖层始终位于导航栏右侧；④ 工件栏/模型面板等 CSS 增量 |
-| `lib/index.js` | **工具 schema 修复**（对齐 `tools/patch_kb_tool_schema86.py`）：`rag_query` / `rag_ingest` / `rag_note` / `rag_delete` 等工具把属性对象内部的 `required: true` 移到 `parameters` 顶层 `required` 数组——旧写法会被 OpenAI/Gemini 严格端点判 400（`Invalid schema for function ...: True is not of type 'array'`） |
-| `package.json` | 版本 0.3.16 -> 0.3.17 |
-| `RELEASE-NOTES.md` | 替换为本文件 |
+| `lib/client.js` | +80 B（536043 -> 536123）。① **「同步文件夹」置顶分组**：新增 `PIN_SYNC = "同步文件夹"` 与 `TOP_ORDER = [PIN_SYNC, ...PIN_ORDER]`，桌面客户端同步进来的目录排在个人库最前，文件夹图标沿用 pin 高亮；刻意**不放进 `PIN_ORDER`** —— `PIN_ORDER` 经 `isPinnedPrefix()` 喂给 `isPersonalFolder()`，进去就会被当成只读镜像而排除出个人库树。② **「AI 模型」弹窗下线 ASR 分类卡**：删掉 39 行 JSX 与 `kb.modelAsr` / `kb.modelAsrDesc` 中英文案，留 `kbAsrRm86-stamp-20261011-094954` 标记。③ **OFV 查看器挂载竞态修复**（`ofvMountRace-20261010`）：按字节身份（`content.data` 的 `byteLength`）而非 `content` 包装对象判断是否需要重挂；每个宿主一条串行挂载链 + `seq` 令牌，避免父级因元数据版本帧重建 `content` 期间并发发起第二次 `ofvMount`（要等 11 MB 的 `/viewer/ofv.bundle.js`）导致 `<div>` 双挂。④ CSS 增量 |
+| `sidecar/server.py` | +558 B（538498 -> 539056）。① `TEXT_EXTS` 纳入 `.html` / `.htm`（网页另存文件可直接文本入库）；② 系统提示新增第 6 条身份硬规则（被问「你是什么模型 / 你是谁」时固定自我介绍）；③ `_silent_dup` 的孪生探测由「遍历全部 PROCESSED 文档逐一比对文件名」改为 **`lightrag.utils.compute_mdhash_id(text, prefix="doc-")` 按内容 hash 直取 twin**，并补上 `silentdup2 twin-by-content` / `twin-probe failed` 日志 |
+| `package.json` | 版本 `0.4.0` -> `0.4.1` |
+
+## 附带修正
+
+- **`README.md`**：GitHub 上的 `README.md` 当时是**另一条线**（`dsh-raganything-kb` 原始插件线，
+  讲「本地托管 / 远程共享」两种部署模式）的 README，与本仓库（sharedkb 线、多用户网关）定位不符。
+  本版恢复为 sharedkb 线 README（即 0.4.0 便携包内随附的那一份），并补 `0.4.1` / `0.4.0` / `0.3.17`
+  三行版本记录。
 
 ## 不变项（显式断言）
 
-- `sidecar/server.py` 与 0.3.16 逐字节相同（`cc60b669…`，383404 B）—— 本版未动 server 侧。
-- 其余成员（cordis.patch.yml / kb/config.json.template / sidecar/viewer/ 等）逐字节不变。
+- `lib/index.js` sha256 `09d9e3ca…a6811e`（55389 B）与 0.4.0 逐字节相同。
+- `cordis.patch.yml`、`kb/config.json.template`、`sidecar/request_generation.py`、
+  `sidecar/shared_query.py`、`sidecar/viewer/`（187 项）逐字节相同。
+- 便携包的安装骨架（`install.sh` 除 `PKG_VERSION`、`uninstall.sh`、`verify.sh`、`extras/`、`tools/`）
+  逐字节继承 0.4.0。
 
 ## 为什么要出这一版
 
-0.3.16 截止于 2026-09-22；此后 8.6 上又落了两类只存在于活副本的热修：
-① 2026-09-23 DSH 升级 0.1.7-alpha.2 后的图标字重后缀适配（漏了即知识库面板整条消失）；
-② 2026-09-24 的 KB 工具 schema 修复（严格 OpenAI 兼容端点 400 的真根因）。
+0.4.0 截止于 2026-10-07。此后 8.6 上又落了四类只存在于活副本的改动：
+① 客户端「同步文件夹」置顶分组（桌面客户端同步目录的展示口径）；
+② 「AI 模型」弹窗下线 ASR 分类（该分类在本线无可用模型）；
+③ OFV 查看器挂载竞态修复（父级重渲染期间的二次挂载）；
+④ sidecar 侧的 `.html/.htm` 入库、身份硬规则与 `silentdup2` 孪生探测改走内容 hash。
 任何 `pnpm install` / 重装 / 回滚都会把这些修复整体抹掉 —— 本版把它们固化进发行件。
 
 ## 验证
 
-- 包内 `lib/client.js` / `lib/index.js` 与 8.6 宿主活副本逐字节一致（LF-clean，无 CRLF）。
-- 修复标记齐备（见 build_rel0317.py 断言 5）。
-- `node --check` 通过；无 `.bak` 混入；确定性 md5 复核通过（连跑两次同 md5）。
+- 包内 `lib/client.js`、`lib/index.js`、`sidecar/server.py` 与 8.6 宿主活副本逐字节一致。
+- `payload/sidecar/viewer/` 187 项与 live 逐字节一致（哈希字典相等断言）。
+- 便携包连打两次 md5 相同（确定性）；`plugin/*.tgz` 与发行 tgz 逐字节相同。
 
 ## 部署注意
 

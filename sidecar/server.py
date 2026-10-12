@@ -146,7 +146,7 @@ PARSER_SUPPORTED_EXTS: set[str] = {
     ".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp", ".gif",
 }
 AUDIO_EXTS: set[str] = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac", ".wma"}
-TEXT_EXTS: set[str] = {".txt", ".md", ".markdown"}
+TEXT_EXTS: set[str] = {".txt", ".md", ".markdown", ".html", ".htm"}
 
 # Browser file uploads land here before an ingest task picks them up.
 UPLOAD_DIR = CONFIG.get("upload_dir") or str(Path(CONFIG["working_dir"]) / "uploads")
@@ -6096,6 +6096,8 @@ _CHAT_SYSTEM = (
     "并指出应在界面上用哪个入口操作；绝不假装已经执行。\n"
     "5. 你的能力：按内容检索问答；用 @ 指定文件或文件夹缩小范围；"
     "盘点新增、整理履历、归纳主题、汇总书目；把回答导出为文件。"
+    "6. 当用户问你是什么模型、你是谁或要求自我介绍时，固定回答："
+    "我是 huiwen 2-Agron 呀～由 AI 汇智团队以 qwen3.8-flash-next-q4 为底座，融合 deepseek-r1-1.5-huiwen:latest 记忆模型，专门微调打造而成。专业又可爱，随时待命哦～请问有什么可以帮到你的呢？(｡･ω･｡)ﾉ♡"
 )
 
 
@@ -6509,28 +6511,29 @@ async def _silent_dup_selfheal(rag: Any, display: str, params: dict[str, Any],
     #    退化为「库中存在同**基名**的 processed 行」——同名同内容孪生即属此列。
     _alias_processed = False
     try:
+        from lightrag.utils import compute_mdhash_id as _cmid
         from lightrag.base import DocStatus as _DS2
-        _pm = await rag.lightrag.get_docs_by_status(_DS2.PROCESSED)
+        _want_id = _cmid(text, prefix="doc-")
         _want_base = Path(str(display).replace("\\", "/")).name.casefold()
-        for _pid, _pdoc in (_pm or {}).items():
-            _pfp = getattr(_pdoc, "file_path", None)
-            if _pfp is None and isinstance(_pdoc, dict):
-                _pfp = _pdoc.get("file_path")
-            if not _pfp:
-                continue
-            _pb = Path(str(_pfp).replace("\\", "/")).name.casefold()
-            # 去掉上传去重用的 8hex- 前缀再比
-            if len(_pb) > 9 and _pb[8] == "-":
-                _pb = _pb[9:]
-            if len(_want_base) > 9 and _want_base[8] == "-":
-                _want_base_cmp = _want_base[9:]
-            else:
-                _want_base_cmp = _want_base
-            if _pb == _want_base_cmp:
+        if len(_want_base) > 9 and _want_base[8] == "-":
+            _want_base = _want_base[9:]
+        _pm = await rag.lightrag.get_docs_by_status(_DS2.PROCESSED)
+        _twin = (_pm or {}).get(_want_id)
+        if _twin is not None:
+            _tfp = getattr(_twin, "file_path", None)
+            if _tfp is None and isinstance(_twin, dict):
+                _tfp = _twin.get("file_path")
+            _tb = Path(str(_tfp or "").replace("\\", "/")).name.casefold()
+            if len(_tb) > 9 and _tb[8] == "-":
+                _tb = _tb[9:]
+            if _tb and _tb != _want_base:
                 _alias_processed = True
-                break
-    except Exception:
+                print(f"[sidecar] silentdup2 twin-by-content: {display} -> "
+                      f"{_want_id} owned by {_tfp}")
+    except Exception as _e2:
         _alias_processed = False
+        print(f"[sidecar] silentdup2 twin-probe failed: "
+              f"{type(_e2).__name__}: {_e2}")
 
     # 3) 清掉脏行（本次的 dup- 与 FAILED）
     async with _state["ingest_lock"]:
@@ -8230,8 +8233,8 @@ def _account_scope_roots() -> list[Path]:
 
     managed 账号的实例跑在 ~/.dsh/multi-user/users/<acct>/home，但整套多用户部署
     共用同一个 Linux 账号（lgsj），文件系统权限不构成边界。DSH 的工作区登记表里
-    一旦出现宿主路径（实测 /home/lgsj/Downloads、/home/lgsj/temp、
-    /home/lgsj/01-DSH/02-测试），个人知识库的「DSH产物」只读镜像就会把服务器家
+    一旦出现宿主路径（实测 <HOME_PATH>/Downloads、<HOME_PATH>/temp、
+    <HOME_PATH>/01-DSH/02-测试），个人知识库的「DSH产物」只读镜像就会把服务器家
     目录的文件列进用户的知识库树 —— 这就是"个人知识库出现 home 目录文件"的来源。
     宿主实例（DSH_HOME 不含 users/<acct>）不受限：操作者本来就有整机权限。
     """
