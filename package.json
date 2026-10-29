@@ -1,6 +1,6 @@
 {
   "name": "dsh-raganything-kb",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "RAG-Anything knowledge base for DSH: prototype workbench main view, request-scoped generation and verified sources; no knowledge base data bundled.",
   "type": "module",
   "main": "lib/index.js",
