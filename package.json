@@ -1,6 +1,6 @@
 {
   "name": "dsh-raganything-kb",
-  "version": "0.4.6",
+  "version": "0.5.0",
   "description": "RAG-Anything knowledge base for DSH: prototype workbench main view, request-scoped generation and verified sources; no knowledge base data bundled.",
   "type": "module",
   "main": "lib/index.js",
@@ -11,10 +11,11 @@
   },
   "files": [
     "lib/",
-    "sidecar/*.py",
-    "sidecar/viewer/",
+    "sidecar/",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "package.json",
+    "install-manifest.json"
   ],
   "license": "MIT",
   "dsh": {
