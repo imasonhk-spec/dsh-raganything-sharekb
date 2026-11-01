@@ -5,7 +5,7 @@ set -euo pipefail
 PKG_NAME="dsh-raganything-sharekb"
 PKG_VERSION="0.6.0"
 PLUGIN_DIR="dsh-raganything-kb"
-SERVICES="raganything-sidecar dsh-admin-kb-owner redis-zhihui zhihui-sso dsh-docs-engine dsh-ollama-shim"
+SERVICES="raganything-sidecar dsh-admin-kb-owner dsh-ollama-shim"
 
 DSH_HOME="${DSH_HOME:-$HOME/.dsh}"
 PROFILE_DIR="$DSH_HOME/profiles/web"
