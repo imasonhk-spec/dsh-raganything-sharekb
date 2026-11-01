@@ -1,0 +1,23 @@
+[Unit]
+Description=RAG-Anything sidecar (dsh-raganything-kb)
+Documentation=https://github.com/HKUDS/RAG-Anything
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lgsj
+WorkingDirectory=/home/lgsj/.dsh/profiles/web/node_modules/dsh-raganything-kb/sidecar
+EnvironmentFile=/home/lgsj/.dsh/raganything/sidecar.env
+Environment=PATH=/home/lgsj/.dsh/raganything/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/lgsj/.dsh/raganything/venv/bin/python server.py
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+StandardOutput=append:/home/lgsj/.dsh/raganything/logs/sidecar.log
+StandardError=append:/home/lgsj/.dsh/raganything/logs/sidecar.log
+
+[Install]
+WantedBy=multi-user.target

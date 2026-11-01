@@ -1,0 +1,44 @@
+# PROPOSAL ONLY. Do not install/start/enable before validation2 acceptance and
+# an authorized target window. The approval marker does not currently exist.
+# Proposed unit name: dsh-admin-kb-owner.service
+[Unit]
+Description=Admin main knowledge base owner on loopback 32001 (Bot consumer)
+ConditionPathExists=/home/lgsj/.dsh/multi-user/users/admin/home/raganything/.bot-owner-service-release-approved
+ConditionPathExists=/home/lgsj/.dsh/multi-user/users/admin/home/raganything/config.json
+ConditionPathExists=/home/lgsj/.dsh/multi-user/users/admin/home/raganything/venv/bin/python
+
+[Service]
+Type=simple
+User=lgsj
+WorkingDirectory=/home/lgsj/.dsh/multi-user/users/admin/home/profiles/web/node_modules/dsh-raganything-kb/sidecar
+Environment=DSH_HOME=/home/lgsj/.dsh/multi-user/users/admin/home
+Environment=RAG_SIDECAR_CONFIG=/home/lgsj/.dsh/multi-user/users/admin/home/raganything/config.json
+Environment=RAG_SIDECAR_HOST=127.0.0.1
+Environment=RAG_SIDECAR_PORT=32001
+Environment=PATH=/home/lgsj/.dsh/multi-user/users/admin/home/raganything/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+# Supported existing switch: prevent startup endpoint healing from probing
+# local Ollama and rewriting the existing LLM configuration.
+Environment=RAG_LOCAL_ENDPOINT_HEAL=off
+# Use the persisted token/LLM settings in the existing account config.
+# Bot31097 adoption supplies the private generation bridge at runtime.
+UnsetEnvironment=RAG_SIDECAR_TOKEN RAG_LLM_API_KEY RAG_DSH_GENERATION_URL RAG_DSH_GENERATION_TOKEN RAG_RESTART_DELAY_S
+# No RAG_SHARED_* override: existing shared-namespace ownership must be
+# reviewed before the approval marker is prepared. Never substitute an empty
+# local namespace or use shared17321 as this main KB's endpoint.
+ExecStart=/home/lgsj/.dsh/multi-user/users/admin/home/raganything/venv/bin/python server.py
+# Installed sidecar can self-restart using a child in the same cgroup.
+# systemd255 supports tracking that cgroup after the original main PID exits.
+ExitType=cgroup
+Restart=no
+KillMode=control-group
+KillSignal=SIGTERM
+SendSIGKILL=no
+TimeoutStopSec=infinity
+RuntimeMaxSec=infinity
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+# Intentionally no [Install] or automatic boot target in this proposal.
+# Adding a new automatic trigger requires an explicit release-owner decision.

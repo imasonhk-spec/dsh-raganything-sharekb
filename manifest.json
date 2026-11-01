@@ -1,0 +1,36 @@
+{
+  "name": "dsh-raganything-sharekb",
+  "unit": "dsh-raganything-sharekb",
+  "version": "0.6.0",
+  "previousVersion": "0.5.0",
+  "title": "知识库（共享知识库 + RAG sidecar）",
+  "kind": "plugin",
+  "services": [
+    "raganything-sidecar",
+    "dsh-admin-kb-owner",
+    "redis-zhihui",
+    "zhihui-sso",
+    "dsh-docs-engine",
+    "dsh-ollama-shim"
+  ],
+  "ports": [
+    17321,
+    32000,
+    32001,
+    32002,
+    32003,
+    32004
+  ],
+  "pluginDir": "dsh-raganything-kb",
+  "hasVenv": true,
+  "hasNode": false,
+  "hasHarness": false,
+  "generatedAt": "2026-11-01T23:02:09+08:00",
+  "host": "lgsj",
+  "installScope": [
+    "host-profile",
+    "all-existing-accounts"
+  ],
+  "baseRepo": "imasonhk-spec/dsh",
+  "baseTag": "v0.2.0"
+}
