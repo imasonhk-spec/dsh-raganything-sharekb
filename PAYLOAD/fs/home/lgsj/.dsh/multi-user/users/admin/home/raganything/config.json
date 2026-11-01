@@ -77,7 +77,7 @@
     "model": "/home/lgsj/.dsh/multi-user/users/admin/home/raganything/models/sensevoice",
     "device": "cpu"
   },
-  "token": "249000a9cd8d56508db02ee8c8220e637d317f0d0803114af05c0f2036377db1",
+  "token": "__GEN__",
   "qa_budget": {
     "enabled": true,
     "chunk_top_k": 10,
