@@ -3,7 +3,7 @@
 set -euo pipefail
 
 PKG_NAME="dsh-raganything-sharekb"
-PKG_VERSION="0.6.0"
+PKG_VERSION="0.6.1"
 PLUGIN_DIR="dsh-raganything-kb"
 SERVICES="raganything-sidecar dsh-admin-kb-owner dsh-ollama-shim"
 

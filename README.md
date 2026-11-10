@@ -1,4 +1,4 @@
-# dsh-raganything-sharekb 0.6.0
+# dsh-raganything-sharekb 0.6.1
 
 知识库（共享知识库 + RAG sidecar）
 
@@ -20,8 +20,8 @@
 ## 安装
 
 ```bash
-tar -xzf dsh-raganything-sharekb-0.6.0.tar.gz
-cd dsh-raganything-sharekb-0.6.0
+tar -xzf dsh-raganything-sharekb-0.6.1.tar.gz
+cd dsh-raganything-sharekb-0.6.1
 sudo ./install.sh
 ```
 

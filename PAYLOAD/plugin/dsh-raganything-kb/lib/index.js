@@ -75,7 +75,7 @@ export const MANIFEST = {
   order: 5,
   icon: '📚',
   category: '知识管理',
-  version: 'v0.5.0',
+  version: 'v0.4.4',
   tags: ['RAG', '知识库', '引用问答', '共享'],
   subs: ['个人知识库', '共享知识库', '知识库产物'],
   openEvent: 'cappacks:open-kb',

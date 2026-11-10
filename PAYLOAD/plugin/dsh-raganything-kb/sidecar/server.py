@@ -4593,7 +4593,7 @@ async def _run_scoped_query_op(rag, query_text: str, files: list[str],
 # rag 只持有自己的私有库（file_path 无「共享/」前缀）。前端 @ 共享文件时 scope
 # 不带「共享/」前缀，用户实例本地检索永远 0 命中。这里把「命中共享文件夹」的
 # 作用域拆分出来，转发到宿主 sidecar 检索，私有部分仍本地检索，最后合并。
-_SHARED_KB_JSON = os.environ.get("RAG_SHARED_KB_JSON") or "${DSH_HOME}/.dsh/raganything/shared_kb.json"
+_SHARED_KB_JSON = os.environ.get("RAG_SHARED_KB_JSON") or "/home/lgsj/.dsh/raganything/shared_kb.json"
 _SHARED_FOLDER_CACHE = {"names": None, "ts": 0.0}
 
 def _shared_folder_names():
@@ -8233,8 +8233,8 @@ def _account_scope_roots() -> list[Path]:
 
     managed 账号的实例跑在 ~/.dsh/multi-user/users/<acct>/home，但整套多用户部署
     共用同一个 Linux 账号（lgsj），文件系统权限不构成边界。DSH 的工作区登记表里
-    一旦出现宿主路径（实测 ${DSH_HOME}/Downloads、${DSH_HOME}/temp、
-    ${DSH_HOME}/01-DSH/02-测试），个人知识库的「DSH产物」只读镜像就会把服务器家
+    一旦出现宿主路径（实测 /home/lgsj/Downloads、/home/lgsj/temp、
+    /home/lgsj/01-DSH/02-测试），个人知识库的「DSH产物」只读镜像就会把服务器家
     目录的文件列进用户的知识库树 —— 这就是"个人知识库出现 home 目录文件"的来源。
     宿主实例（DSH_HOME 不含 users/<acct>）不受限：操作者本来就有整机权限。
     """
