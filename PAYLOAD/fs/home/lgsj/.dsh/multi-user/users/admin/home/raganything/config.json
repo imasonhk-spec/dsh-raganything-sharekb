@@ -1,0 +1,101 @@
+{
+  "host": "0.0.0.0",
+  "port": 32001,
+  "working_dir": "/home/lgsj/.dsh/multi-user/users/admin/home/raganything/storage",
+  "output_dir": "/home/lgsj/.dsh/multi-user/users/admin/home/raganything/output",
+  "models_dir": "/home/lgsj/.dsh/multi-user/users/admin/home/raganything/models",
+  "parser": "mineru",
+  "parse_method": "auto",
+  "parser_backend": "pipeline",
+  "parser_timeout_s": 900,
+  "max_concurrent_tasks": 2,
+  "llm": {
+    "base_url": "http://127.0.0.1:11434/v1",
+    "model": "huiwen-2-agron:latest",
+    "api_key": "occamy"
+  },
+  "vision": {
+    "base_url": "http://127.0.0.1:11434/v1",
+    "model": "huiwen-2-agron:latest",
+    "api_key": "occamy"
+  },
+  "embedding": {
+    "backend": "gguf",
+    "model": "bge-m3-f16.gguf",
+    "model_path": "/home/lgsj/.dsh/multi-user/users/admin/home/raganything/models/bge-m3-f16/bge-m3-FP16.gguf",
+    "dims": 1024,
+    "max_token_size": 8192
+  },
+  "enable_audio_processing": false,
+  "rerank": {
+    "enabled": true,
+    "backend": "transformers",
+    "model": "bge-reranker-base",
+    "model_path": "/home/lgsj/.dsh/multi-user/users/admin/home/raganything/models/bge-reranker-base",
+    "device": "cpu",
+    "max_length": 512
+  },
+  "lightrag": {
+    "max_parallel_insert": 4,
+    "chunk_token_size": 2000,
+    "chunk_overlap_token_size": 200,
+    "embedding_batch_num": 16,
+    "entity_extract_max_gleaning": 1,
+    "index_llm_model": "huiwen-2-agron:latest",
+    "default_llm_timeout": 900,
+    "default_embedding_timeout": 300,
+    "index_reasoning_effort": "none"
+  },
+  "custom_models": {
+    "llm": [
+      {
+        "name": "occamy-1.0 (本机 llama.cpp :8082)",
+        "model": "occamy-1.0",
+        "base_url": "http://127.0.0.1:8082/v1",
+        "dims": null,
+        "api_key": "occamy"
+      }
+    ],
+    "vision": [
+      {
+        "name": "本机 Ollama (127.0.0.1:11434)",
+        "model": "qwen3.8:27b",
+        "base_url": "http://127.0.0.1:11435/v1",
+        "dims": null
+      },
+      {
+        "name": "occamy-1.0 (本机 llama.cpp :8082)",
+        "model": "occamy-1.0",
+        "base_url": "http://127.0.0.1:8082/v1",
+        "dims": null,
+        "api_key": "occamy"
+      }
+    ]
+  },
+  "asr": {
+    "backend": "sensevoice",
+    "model": "/home/lgsj/.dsh/multi-user/users/admin/home/raganything/models/sensevoice",
+    "device": "cpu"
+  },
+  "token": "__GEN__",
+  "qa_budget": {
+    "enabled": true,
+    "chunk_top_k": 10,
+    "top_k": 20,
+    "max_entity_tokens": 1000,
+    "max_relation_tokens": 1200,
+    "max_total_tokens": 4000,
+    "scope_hits": 5,
+    "scope_chars": 620,
+    "answer_contract": true,
+    "temperature": 0.2,
+    "prompt_max_chars": 3200,
+    "prompt_max_hits": 6
+  },
+  "qa_shared_merge": {
+    "enabled": true,
+    "dedup": true,
+    "max_hits": 3,
+    "max_chars": 1200
+  }
+}

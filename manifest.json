@@ -1,0 +1,98 @@
+{
+  "name": "dsh-raganything-sharekb",
+  "unit": "dsh-raganything-sharekb",
+  "version": "0.6.2",
+  "previousVersion": "0.6.1",
+  "title": "知识库（共享知识库 + RAG sidecar）",
+  "kind": "plugin",
+  "services": [
+    "raganything-sidecar",
+    "dsh-admin-kb-owner",
+    "dsh-ollama-shim"
+  ],
+  "ports": [
+    17321,
+    32000,
+    32001,
+    32002,
+    32003,
+    32004
+  ],
+  "pluginDir": "dsh-raganything-kb",
+  "hasVenv": true,
+  "hasNode": false,
+  "hasHarness": false,
+  "generatedAt": "2026-11-10T12:50:26+08:00",
+  "host": "lgsj",
+  "installScope": [
+    "host-profile",
+    "all-existing-accounts"
+  ],
+  "baseRepo": "imasonhk-spec/dsh",
+  "baseTag": "v0.2.0",
+  "fsEntries": [
+    {
+      "src": "/home/lgsj/.dsh/profiles/web/node_modules/dsh-raganything-kb/sidecar",
+      "dst": "fs/home/lgsj/.dsh/profiles/web/node_modules/dsh-raganything-kb/sidecar",
+      "type": "dir"
+    },
+    {
+      "src": "/home/lgsj/.dsh/raganything/sidecar.env",
+      "dst": "fs/home/lgsj/.dsh/raganything/sidecar.env",
+      "type": "file",
+      "mode": "0o600",
+      "size": 260,
+      "sha256": "0a73924f8766db1cee6b3e60acb17a2348ecb798a9bb72e38ffdc0593ff9bebc"
+    },
+    {
+      "src": "/home/lgsj/.dsh/raganything/venv/bin/python",
+      "dst": "fs/home/lgsj/.dsh/raganything/venv/bin/python",
+      "type": "symlink",
+      "target": "python3"
+    },
+    {
+      "src": "/home/lgsj/.dsh/multi-user/users/admin/home/profiles/web/node_modules/dsh-raganything-kb/sidecar",
+      "dst": "fs/home/lgsj/.dsh/multi-user/users/admin/home/profiles/web/node_modules/dsh-raganything-kb/sidecar",
+      "type": "dir"
+    },
+    {
+      "src": "/home/lgsj/.dsh/multi-user/users/admin/home/raganything/config.json",
+      "dst": "fs/home/lgsj/.dsh/multi-user/users/admin/home/raganything/config.json",
+      "type": "file",
+      "mode": "0o600",
+      "size": 2847,
+      "sha256": "4f94015d0ad5151ff50ab30c6096367a445df7cbc5ae13be76bd75251bb50e07"
+    },
+    {
+      "src": "/home/lgsj/.dsh/multi-user/users/admin/home/raganything/venv/bin/python",
+      "dst": "fs/home/lgsj/.dsh/multi-user/users/admin/home/raganything/venv/bin/python",
+      "type": "symlink",
+      "target": "python3"
+    },
+    {
+      "src": "/home/lgsj/dsh-ollama-shim",
+      "dst": "fs/home/lgsj/dsh-ollama-shim",
+      "type": "dir"
+    },
+    {
+      "src": "/usr/local/bin/node",
+      "dst": "fs/usr/local/bin/node",
+      "type": "symlink",
+      "target": "/usr/local/node/bin/node"
+    }
+  ],
+  "aptProvides": [],
+  "runtimeFrom": [
+    "/usr/local/node"
+  ],
+  "pathRemap": [
+    {
+      "from": "/home/lgsj/.dsh",
+      "to": "@DSH_HOME@"
+    },
+    {
+      "from": "/home/lgsj",
+      "to": "@USER_HOME@"
+    }
+  ]
+}
